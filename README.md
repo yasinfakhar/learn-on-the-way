@@ -100,3 +100,9 @@ The integration suite uses an isolated SQLite test database and verifies OAuth s
 - Expired auth records are rejected but currently retained; schedule database housekeeping as traffic grows. Password reset and email verification are future work.
 
 Configure while parked. Lessons should pause whenever attention is needed for traffic.
+
+## Narration-first host behavior
+
+Starting or resuming returns the actual `next_step` and step-specific `delivery` instructions. A text step must be narrated before any Q&A or quiz; no invented coaching or personal reflection questions. Read operations never complete a lesson. Future steps cannot be opened, completed or answered until preceding steps are complete. `open_step` includes earlier narrative context only for Q&A/quiz, rather than exposing future quizzes during narration. Persian MCP output uses unescaped Unicode.
+
+These controls guide a host AI; the server cannot observe or prove that the host actually spoke the whole narration. Mobile voice behavior must still be checked in a fresh Live conversation. Existing client connections may cache server instructions and tool descriptions; refresh tool metadata or reconnect if needed. Course content and existing learner progress are preserved by this change.

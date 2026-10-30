@@ -41,6 +41,8 @@ def test_auth_progress_and_isolation():
         assert tool('complete_course',cid).status_code==422
         assert tool('rate_course',{**cid,'rating':5}).status_code==422
         assert tool('complete_step',{**cid,'step':3}).status_code==422
+        assert tool('record_answer',{**cid,'step':3,'answered':True,'answer':'Premature answer'}).status_code==422
+        for step in (1,2): assert tool('complete_step',{**cid,'step':step}).status_code==200
         assert tool('record_answer',{**cid,'step':3,'answered':True,'answer':''}).status_code==422
         assert tool('record_answer',{**cid,'step':3,'answered':True,'answer':'Recall it in my own words','correct':True}).status_code==200
         for step in range(1,5): assert tool('complete_step',{**cid,'step':step}).status_code==200

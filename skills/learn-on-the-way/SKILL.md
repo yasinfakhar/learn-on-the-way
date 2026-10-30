@@ -1,13 +1,17 @@
 ---
 name: learn-on-the-way
-description: Teach and resume Learn on the Way micro courses using its connected MCP tools, with short spoken lessons and grounded Q&A.
+description: Play Learn on the Way micro courses with narration first, learner-led Q&A next, and only the course's authored quiz questions.
 ---
-Use the connected Learn on the Way tools. If authentication is requested, let the client open its browser sign-in flow. Never request a password or token in chat.
+Use the connected Learn on the Way tools. Let the client handle browser sign-in; never ask for secrets in chat.
 
-Find courses with list_micro_courses or search_micro_courses. Use get_my_learning when the learner wants to resume without naming a course, then start_or_continue_course. Teach the returned next_step, one step at a time. Speech playback and voice tool support belong to the host client; do not claim audio is playing when only text is available.
+When a learner selects or asks to start/continue a course, call start_or_continue_course before presenting any lesson. The course title and description are not the teaching material. Do not ask whether they want an introduction, are ready, or have a personal example. Their request to start is sufficient. If they have not identified a course, list/search courses and clarify only which course they want. For an unspecified resume request, use get_my_learning to find their course.
 
-For text, narrate the material in short natural sentences. For qa, invite a question and use open_step to retrieve course_material for grounded answers. Identify questions the material cannot answer. For quiz, ask the question without revealing expected_answer, wait for the learner's actual response, assess against the expected answer, and record_answer with the exact response. If skipped, record answered=false with an empty answer and leave the step incomplete. Correctness and whether a response was given are different fields; an incorrect response can be discussed and the step completed.
+Follow next_step.type and the returned delivery instructions:
 
-Complete a step only after it has been delivered or discussed. Confirm ambiguous delivery or completion. Pause on request and resume from stored progress. Once every step is complete, complete_course and invite a rating from 1 to 5. Persist a rating only when the user gives one.
+- text: Immediately narrate the actual content in its original language. Deliver every substantive paragraph, in order and in manageable spoken portions. Do not replace it with a brief summary, improvise advice, or end each portion with a question. Keep the step incomplete if interrupted. After delivering the full text, complete_step and follow the next step.
+- qa: After the preceding narration, briefly invite the learner's questions and wait. Answer only from course_material retrieved with open_step. State when the material lacks an answer. This is not a coaching interview: do not ask personal reflection questions or introduce an assessment. Complete when the learner has no more questions or asks to continue.
+- quiz: Ask only the authored content, then wait. Do not read expected_answer. Record the exact actual response and assess it using the supplied answer guidance. Do not invent follow-up quiz questions. If skipped, record answered=false with an empty answer and leave it incomplete.
 
-Keep interaction hands-free while driving, one prompt at a time. Tell the learner to handle setup while parked. If traffic or attention demands increase, pause immediately. Never require reading a screen during a lesson.
+Execution guidance inside a step is instructor-only; do not narrate it. Never add anecdotes, claims, exercises or advice absent from course material. Do not mark a step complete just because a tool returned its content. Once all steps have been delivered and completed, complete_course and invite a rating; save only a rating the learner actually gives.
+
+Pause when requested and resume from stored progress. Voice playback is supplied by the host client. Setup should happen while parked; pause whenever traffic needs attention.
