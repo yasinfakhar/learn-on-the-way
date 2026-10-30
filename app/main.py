@@ -1,4 +1,4 @@
-import contextlib, contextvars, json, os, time
+import contextlib, contextvars, json, os, time, logging
 from collections import defaultdict, deque
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, HTMLResponse
@@ -11,23 +11,13 @@ from jsonschema import validate, ValidationError
 from .db import Base, engine
 from .auth import router, authenticate, BASE
 from .learning import TOOLS, execute
+from .teaching import HOST_INSTRUCTIONS
 from .courses import catalog
 
 current_user = contextvars.ContextVar('user',default=None)
 mcp = FastMCP('Learn on the Way', stateless_http=True, json_response=True,
  transport_security=TransportSecuritySettings(allowed_hosts=[urlsplit(BASE).netloc,'127.0.0.1:*','localhost:*'], allowed_origins=[BASE]),
- instructions=(
- 'Learn on the Way is a narration-first course player, not a coaching interview. '
- 'When the learner selects a course or asks to start/continue it, call start_or_continue_course BEFORE talking about its content. '
- 'Use the tool result as the source of truth; never invent a lesson from the course title or description. '
- 'Follow next_step.type and delivery exactly. For text: immediately narrate the actual material in its original language, all substantive paragraphs in order, with no readiness, preference, personal-experience or reflection questions. '
- 'Do not ask for permission to start after the learner already asked to start. Do not replace the narration with a brief generic summary. '
- 'For qa: only invite the learner questions after earlier narration is delivered; answer from the supplied course material. Do not quiz or interview the learner. '
- 'For quiz: ask only the authored question at this step, wait for the real answer and record it. Never introduce additional questions. '
- 'Execution guidance and expected answers are instructor-only and must not be read aloud. '
- 'Complete a step only after delivering its material; tool calls alone do not mean narration was heard. Never fabricate progress. '
- 'Pause on request or whenever the learner needs to focus on driving. The host client supplies voice playback.'
- ))
+ instructions=HOST_INSTRUCTIONS)
 
 def schema(tool): return {'type':'object','properties':tool['properties'],'required':tool.get('required',[]),'additionalProperties':False}
 @mcp._mcp_server.list_tools()
@@ -40,7 +30,12 @@ async def call_tool(name, arguments):
         if name not in TOOLS: raise ValueError('Unknown tool')
         validate(arguments,schema(TOOLS[name]))
         result = execute(current_user.get(),name,arguments)
-        return [types.TextContent(type='text',text=json.dumps(result, ensure_ascii=False))]
+        structured = result if isinstance(result, dict) else {'items': result}
+        content = [types.TextContent(type='text', text=json.dumps(result, ensure_ascii=False))]
+        if isinstance(result, dict) and 'next_action' in result:
+            content.append(types.TextContent(type='text', text='REQUIRED NEXT ACTION: ' + json.dumps(result['next_action'], ensure_ascii=False)))
+        logging.getLogger('uvicorn.error').info('workflow tool=%s course=%s step=%s next_action=%s', name, arguments.get('course_id'), arguments.get('step'), structured.get('next_action', {}).get('type'))
+        return types.CallToolResult(content=content, structuredContent=structured, isError=False)
     except (ValueError,ValidationError) as error:
         raise ValueError(str(error).split('\n')[0])
 

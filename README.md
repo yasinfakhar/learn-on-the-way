@@ -106,3 +106,20 @@ Configure while parked. Lessons should pause whenever attention is needed for tr
 Starting or resuming returns the actual `next_step` and step-specific `delivery` instructions. A text step must be narrated before any Q&A or quiz; no invented coaching or personal reflection questions. Read operations never complete a lesson. Future steps cannot be opened, completed or answered until preceding steps are complete. `open_step` includes earlier narrative context only for Q&A/quiz, rather than exposing future quizzes during narration. Persian MCP output uses unescaped Unicode.
 
 These controls guide a host AI; the server cannot observe or prove that the host actually spoke the whole narration. Mobile voice behavior must still be checked in a fresh Live conversation. Existing client connections may cache server instructions and tool descriptions; refresh tool metadata or reconnect if needed. Course content and existing learner progress are preserved by this change.
+
+## Runtime workflow contract (0.2)
+
+The host follows `next_action` returned by the MCP server on every course call. These actions are present both in `structuredContent` and visible text; they do not depend on installing the repository's optional skills. A custom remote MCP connection does not automatically install GitHub skills. The packaged skill repeats the same sequence and declares its MCP dependency.
+
+| Event | Required host action | Persisted result |
+|---|---|---|
+| Full narration delivered | `complete_step` from `after_delivery` | Completed step + timestamp |
+| Learner finishes Q&A | `complete_step` from `after_learner_done` | Completed Q&A step |
+| Authored quiz response | `record_answer` with exact answer, then `complete_step` | Answer and completed quiz |
+| Last step completed | `complete_course` | Passed course + timestamp |
+| Passed course without rating | Ask returned rating prompt; wait | No invented rating |
+| Learner gives 1–5 | `rate_course` | Rating + timestamp; end flow |
+
+A recorded answer transitions to saving quiz completion, rather than asking the same quiz again. A passed, unrated course resumes at the rating prompt; a rated course ends without another prompt. Read/start calls never imply delivery or complete progress automatically. Existing learner records are preserved; missed tool calls cannot be reconstructed from server data alone. The host must observe delivery or an explicit learner acknowledgment before saving completion.
+
+Server logs record tool name, course/step and next action, without answers or credentials. Host connection metadata may need refreshing after deployment (or reconnecting), particularly for changed tool descriptions. The server returns the current action even when host metadata is cached. Backend integration tests prove the server transitions and persistence; they do not guarantee that an external voice model will follow every action.

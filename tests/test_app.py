@@ -61,3 +61,39 @@ def test_auth_progress_and_isolation():
         assert len(result.json()['result']['tools'])==9,result.text
         result=client.post('/mcp',headers=headers,json={'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'get_my_learning','arguments':{}}})
         assert result.status_code==200 and '[]' in result.text,result.text
+
+
+def test_mcp_structured_workflow_includes_required_persistence():
+    import importlib
+    from app import main as application
+    # The MCP SDK session manager is intentionally single-use per app lifetime.
+    app=importlib.reload(application).app
+    Base.metadata.drop_all(engine)
+    with TestClient(app) as client:
+        tokens,_=connect(client,'workflow@example.com')
+        headers={'Authorization':'Bearer '+tokens['access_token'],'Accept':'application/json, text/event-stream'}
+        def call(name,args):
+            response=client.post('/mcp',headers=headers,json={'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':name,'arguments':args}})
+            assert response.status_code==200,response.text
+            payload=response.json()['result']
+            assert not payload.get('isError'),payload
+            assert payload['structuredContent']==__import__('json').loads(payload['content'][0]['text'])
+            assert payload['content'][1]['text'].startswith('REQUIRED NEXT ACTION:')
+            return payload['structuredContent']
+        cid={'course_id':'learning-that-sticks'}
+        start=call('start_or_continue_course',cid)
+        assert start['next_action']['after_delivery']['tool']=='complete_step'
+        qa=call('complete_step',{**cid,'step':1})
+        assert qa['next_action']['after_learner_done']['tool']=='complete_step'
+        quiz=call('complete_step',{**cid,'step':2})
+        assert quiz['next_action']['type']=='ask_authored_quiz'
+        answer=call('record_answer',{**cid,'step':3,'answered':True,'answer':'Recall the lesson without looking.'})
+        assert answer['next_action']['tool']=='complete_step'
+        narration=call('complete_step',{**cid,'step':3})
+        assert narration['next_action']['type']=='narrate'
+        finish=call('complete_step',{**cid,'step':4})
+        assert finish['next_action']['tool']=='complete_course'
+        passed=call('complete_course',cid)
+        assert passed['next_action']['type']=='request_rating'
+        rated=call('rate_course',{**cid,'rating':5})
+        assert rated['next_action']['type']=='end'

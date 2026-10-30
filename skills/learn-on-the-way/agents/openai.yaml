@@ -1,0 +1,7 @@
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "learn-on-the-way"
+      description: "Play micro courses, persist each step, record quiz answers, complete the course and save the learner rating."
+      transport: "streamable_http"
+      url: "https://learn.sayahub.ir/mcp"
