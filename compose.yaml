@@ -1,0 +1,26 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:8790:8790"
+    volumes:
+      - ./courses:/app/courses:ro
+    networks:
+      - existing_database
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+networks:
+  existing_database:
+    external: true
+    name: ${POSTGRES_NETWORK:-root_default}

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "learn-on-the-way",
+  "version": "0.1.0",
+  "description": "Audio-friendly micro courses with grounded Q&A and private learning progress.",
+  "author": {"name": "Yasin Fakhar"},
+  "repository": "https://github.com/yasinfakhar/learn-on-the-way",
+  "extensions": {"com.openai": {"onboardingSkill": "./skills/setup/SKILL.md"}}
+}
